@@ -423,6 +423,23 @@ public final class Method extends Executable {
         sb.append(getName());
     }
 
+    private static final boolean skipQuickCheckMemberAccess;
+    static {
+        skipQuickCheckMemberAccess =
+            AccessController.doPrivileged(new GetSkipQuickCheckMemberAccessAction());
+    }
+
+
+    /** if true LUDCL/forName results would be cached, true by default starting Java8 */
+    private static final class GetSkipQuickCheckMemberAccessAction
+    implements PrivilegedAction<Boolean> {
+        public Boolean run() {
+            String property =
+                System.getProperty("hz.skipQuickCheckMemberAccess", "false");
+            return property.equalsIgnoreCase("true");
+        }
+    }
+
     /**
      * Invokes the underlying method represented by this {@code Method}
      * object, on the specified object with the specified parameters.
@@ -486,7 +503,7 @@ public final class Method extends Executable {
            InvocationTargetException
     {
         if (!override) {
-            if (!Reflection.quickCheckMemberAccess(clazz, modifiers)) {
+            if (skipQuickCheckMemberAccess || !Reflection.quickCheckMemberAccess(clazz, modifiers)) {
                 Class<?> caller = Reflection.getCallerClass();
                 checkAccess(caller, clazz, obj, modifiers);
             }
